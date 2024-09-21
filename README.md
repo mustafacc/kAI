@@ -17,6 +17,7 @@ double-click and ensure a green checkmark appears on the kAI package icon. click
 2. Clone the repository.
 3. Add the repository to a new $KLAYOUT_HOME/salt/kAI directory. Using symbolic links is recommended.
 
+Once the package is added to KLayout, edit the config.yml to include the API key to your preferred model.
 
 ![kAI Logo](docs/_static/kAI_ui.png)
 
