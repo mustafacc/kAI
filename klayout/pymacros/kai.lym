@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description>Chat</description>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>true</autorun>
+ <autorun-early>false</autorun-early>
+ <priority>0</priority>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text>import pya
+from pathlib import Path
+from kai import kai_ui
+import subprocess
+import sys
+
+# Check if OpenAI is installed, and if not, install it
+def install_openai():
+    try:
+        import openai  # Try to import OpenAI
+    except ImportError:
+        # If import fails, install the package
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "openai"])
+
+# Function to open the kAI UI
+def open_kai_ui():
+    install_openai()  # Ensure OpenAI is installed before launching UI
+    ui = kai_ui()  # Removed the parent argument
+    ui.exec_()  # Use exec_() to display the dialog properly
+
+app = pya.Application.instance()
+mw = app.main_window()
+menu = mw.menu()
+
+_path = Path(__file__).parent.parent
+
+# Create a new action for the toolbar
+kai_chat = pya.Action()
+kai_chat.icon_text = "Chat"
+kai_chat.icon = str(_path / "kAI.png")
+kai_chat.on_triggered(open_kai_ui)  # Connect action to open the UI
+menu.insert_item("@toolbar.end", "kai_chat", kai_chat)
+</text>
+</klayout-macro>
