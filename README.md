@@ -17,4 +17,8 @@ double-click and ensure a green checkmark appears on the kAI package icon. click
 2. Clone the repository.
 3. Add the repository to a new $KLAYOUT_HOME/salt/kAI directory. Using symbolic links is recommended.
 
+
+![kAI Logo](docs/_static/kAI_ui.png)
+
 Credits: Thanks to [klive](https://github.com/gdsfactory/klive) for codebase and package structure!
+
