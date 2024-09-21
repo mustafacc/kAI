@@ -17,21 +17,22 @@
  <dsl-interpreter-name/>
  <text>import pya
 from pathlib import Path
-from kai import kai_ui
 import subprocess
 import sys
 
 # Check if OpenAI is installed, and if not, install it
-def install_openai():
-    try:
-        import openai  # Try to import OpenAI
-    except ImportError:
-        # If import fails, install the package
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "openai"])
+try:
+    import openai  # Try to import OpenAI
+except ImportError:
+    # If import fails, install the package
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "openai"])
+
+
+from kai import kai_ui
 
 # Function to open the kAI UI
 def open_kai_ui():
-    install_openai()  # Ensure OpenAI is installed before launching UI
+
     ui = kai_ui()  # Removed the parent argument
     ui.exec_()  # Use exec_() to display the dialog properly
 
