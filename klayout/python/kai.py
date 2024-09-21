@@ -205,9 +205,9 @@ class kai_ui(pya.QDialog):
 
     # Load selected history file
     def load_selected_history(self):
-        selected_item = self.history_list.currentItem()
+        selected_item = self.history_list.currentItem
         if selected_item:
-            file_name = selected_item.text()
+            file_name = selected_item.text
             file_path = self.history_dir / f"{file_name}.txt"
             if file_path.exists():
                 with open(file_path, 'r') as file:
