@@ -2,11 +2,22 @@ import pya
 from pathlib import Path
 from datetime import datetime
 from openai import OpenAI
+from typing import List, Dict
 
 # Helper function for OpenAI API call
-def generate_ai_response(api_key, model_name, messages):
-    client = OpenAI(api_key=api_key)      
-    # OpenAI Chat completion call with full chat history
+def generate_ai_response(api_key: str, model_name: str, messages: List[Dict[str, str]]) -> str:
+    """
+    Generate AI response using OpenAI's API.
+
+    Args:
+        api_key (str): The API key for OpenAI.
+        model_name (str): The model name to be used.
+        messages (List[Dict[str, str]]): The conversation history with user input and AI responses.
+
+    Returns:
+        str: The content of the AI response.
+    """
+    client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
         model=model_name,
         messages=messages,  # Pass the entire chat history
@@ -16,20 +27,36 @@ def generate_ai_response(api_key, model_name, messages):
 
 
 class kai_ui(pya.QDialog):
+    """
+    A PyQt-based UI for interacting with an AI assistant.
+
+    Attributes:
+        api_key (str): The OpenAI API key.
+        model_name (str): The model name for AI response generation.
+        config_data (dict): Configuration data from the config file.
+        chat_history (list): List to store user and AI messages.
+        history_dir (Path): Directory for storing chat history files.
+    """
+
     def __init__(self):
+        """Initialize the UI and load configuration."""
         super().__init__()
         self.api_key = None
         self.setWindowTitle("kAI Assistant")
         self.resize(800, 400)
-        self.setStyleSheet(self.get_stylesheet())  # Apply stylesheet
+        self.setStyleSheet(self.get_stylesheet())
         self.config_data = self.load_config()
         self.chat_history = []
         self.history_dir = Path(__file__).parent.parent / 'history'
         self.init_ui()
 
-    # Define get_stylesheet method
-    def get_stylesheet(self):
-        """Apply a modern stylesheet with clean fonts and spacing."""
+    def get_stylesheet(self) -> str:
+        """
+        Define and return the stylesheet for the UI.
+
+        Returns:
+            str: The CSS style rules.
+        """
         return """
             QDialog {
                 background-color: #f0f0f0;
@@ -55,13 +82,13 @@ class kai_ui(pya.QDialog):
                 color: #333333;
             }
             QListWidget {
-                min-width: 200px;  /* Adjust panel size */
+                min-width: 200px;
                 max-width: 100px;
             }
         """
 
-    # Modular UI initialization
-    def init_ui(self):
+    def init_ui(self) -> None:
+        """Initialize the UI layout with input/output fields and history panel."""
         layout = pya.QHBoxLayout(self)
 
         # Create input and output areas
@@ -71,59 +98,66 @@ class kai_ui(pya.QDialog):
         # Add layouts
         layout.addLayout(left_layout)
         layout.addLayout(right_layout)
-
         self.setLayout(layout)
 
-    # UI Setup: Left panel for input/output
-    def setup_left_panel(self):
+    def setup_left_panel(self) -> pya.QVBoxLayout:
+        """
+        Set up the left panel for user input and AI output.
+
+        Returns:
+            pya.QVBoxLayout: The layout with input and output fields.
+        """
         left_layout = pya.QVBoxLayout()
 
-        # Input field
         self.user_input = pya.QLineEdit(self)
         self.user_input.setPlaceholderText("Enter your prompt here...")
         left_layout.addWidget(self.user_input)
 
-        # Output field
         self.output_area = pya.QTextEdit(self)
         self.output_area.setReadOnly(True)
         left_layout.addWidget(self.output_area)
 
-        # Submit button
         submit_button = pya.QPushButton("Submit", self)
         submit_button.clicked.connect(self.on_submit)
         left_layout.addWidget(submit_button)
 
-        # Display config
         self.config_display = pya.QLabel(self)
         left_layout.addWidget(self.config_display)
         self.update_config_display()
 
         return left_layout
 
-    # UI Setup: Right panel for history
-    def setup_right_panel(self):
+    def setup_right_panel(self) -> pya.QVBoxLayout:
+        """
+        Set up the right panel for displaying and loading chat history.
+
+        Returns:
+            pya.QVBoxLayout: The layout with history elements.
+        """
         right_layout = pya.QVBoxLayout()
 
-        # Chat history list (only loads "complete" txt files)
         right_layout.addWidget(pya.QLabel("Chat History (Complete)"))
         self.history_list = pya.QListWidget(self)
         self.load_history_files()
         right_layout.addWidget(self.history_list)
 
-        # Load button
         load_button = pya.QPushButton("Load Selected", self)
         load_button.clicked.connect(self.load_selected_history)
         right_layout.addWidget(load_button)
 
-        # View config button
         view_config_button = pya.QPushButton("View Config", self)
         view_config_button.clicked.connect(self.view_config_file)
         right_layout.addWidget(view_config_button)
 
         return right_layout
 
-    # Function to load config.yml
-    def load_config(self):
+    def load_config(self) -> Dict[str, str]:
+        """
+        Load configuration data from a YAML file.
+
+        Returns:
+            dict: Configuration data including API key and model name.
+        """
         config_path = Path(__file__).parent.parent / 'config.yml'
         config_data = {}
         if config_path.exists():
@@ -136,41 +170,41 @@ class kai_ui(pya.QDialog):
         self.model_name = config_data.get('model_name', 'Not set')
         return config_data
 
-    # Update config display
-    def update_config_display(self):
+    def update_config_display(self) -> None:
+        """
+        Update the UI to display the current API key and model configuration status.
+        """
         api_key_display = "API Key: Configured" if self.api_key != 'null' and self.api_key != 'Not set' else "API Key: Not Configured"
         self.config_display.setText(f"{api_key_display}\nModel Name: {self.config_data.get('model_name', 'Not set')}")
-        if self.api_key == 'null' or self.api_key == 'Not set':
-            self.config_display.setStyleSheet("color: red;")
-        else:
-            self.config_display.setStyleSheet("color: black;")
+        self.config_display.setStyleSheet("color: black;" if api_key_display != "API Key: Not Configured" else "color: red;")
 
-    # Event handler for submit button
-    def on_submit(self):
+    def on_submit(self) -> None:
+        """
+        Handle the submit button click event, sending user input to OpenAI and updating the UI with the response.
+        """
         prompt = self.user_input.text
         if prompt and self.api_key != 'Not set':
-            # Add user message to chat history
             self.chat_history.append({"role": "user", "content": prompt})
             user_entry = f"User [{self.get_timestamp()}]: {prompt}"
             self.append_to_output(user_entry)
 
-            # Call OpenAI with the entire chat history
             response = generate_ai_response(self.api_key, self.model_name, self.chat_history)
 
-            # Add AI response to chat history
             self.chat_history.append({"role": "assistant", "content": response})
             ai_entry = f"AI [{self.get_timestamp()}]: {response}"
             self.append_to_output(ai_entry, is_ai=True)
 
-            # Add separator for visual clarity
             self.append_to_output("===")
-
-            # Store individual chat entry immediately
             self.store_chat_history(user_entry, ai_entry)
 
+    def append_to_output(self, text: str, is_ai: bool = False) -> None:
+        """
+        Append text to the output display with optional AI-specific formatting.
 
-    # Append output to display
-    def append_to_output(self, text, is_ai=False):
+        Args:
+            text (str): The text to append.
+            is_ai (bool): Whether the text is from AI, applying color formatting if True.
+        """
         cursor = self.output_area.textCursor
         cursor.movePosition(pya.QTextCursor.End)
         if is_ai:
@@ -180,31 +214,41 @@ class kai_ui(pya.QDialog):
         cursor.insertText(text + '\n')
         self.output_area.setTextCursor(cursor)
 
-    # Helper to generate a timestamp
-    def get_timestamp(self):
+    def get_timestamp(self) -> str:
+        """
+        Get the current timestamp formatted as a string.
+
+        Returns:
+            str: The current timestamp in 'YYYY-MM-DD HH:MM:SS' format.
+        """
         return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    # Store chat history after each user entry and AI response
-    def store_chat_history(self, user_entry, ai_entry):
-        self.history_dir.mkdir(exist_ok=True)  # Ensure history directory exists
+    def store_chat_history(self, user_entry: str, ai_entry: str) -> None:
+        """
+        Save the current chat history entries to a file.
+
+        Args:
+            user_entry (str): The user's message entry.
+            ai_entry (str): The AI's message entry.
+        """
+        self.history_dir.mkdir(exist_ok=True)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         file_path = self.history_dir / f'kai_{timestamp}.txt'
 
-        # Save both user entry and AI response immediately
         with open(file_path, 'a') as file:
             file.write(user_entry + '\n')
             file.write(ai_entry + '\n')
             file.write("===\n")
 
-    # Load history files into the list (only "complete" txt files)
-    def load_history_files(self):
+    def load_history_files(self) -> None:
+        """Load chat history files from the history directory."""
         self.history_list.clear()
         if self.history_dir.exists():
             for file in self.history_dir.glob("*complete*.txt"):
-                self.history_list.addItem(str(file.stem))  # Show file name without extension
+                self.history_list.addItem(file.stem)
 
-    # Load selected history file
-    def load_selected_history(self):
+    def load_selected_history(self) -> None:
+        """Load the selected chat history file and display its contents in a new dialog."""
         selected_item = self.history_list.currentItem
         if selected_item:
             file_name = selected_item.text
@@ -213,7 +257,6 @@ class kai_ui(pya.QDialog):
                 with open(file_path, 'r') as file:
                     history_content = file.read()
 
-                # Open a new dialog to display the chat history
                 history_dialog = pya.QDialog(self)
                 history_dialog.setWindowTitle(f"Chat History - {file_name}")
                 history_dialog.resize(600, 400)
@@ -228,14 +271,13 @@ class kai_ui(pya.QDialog):
 
                 history_dialog.exec_()
 
-    # Display the config.yml file content in a new window
-    def view_config_file(self):
+    def view_config_file(self) -> None:
+        """Display the contents of the config.yml file in a new dialog."""
         config_path = Path(__file__).parent.parent / 'config.yml'
         if config_path.exists():
             with open(config_path, 'r') as file:
                 config_content = file.read()
 
-            # Open a new dialog to display the config.yml contents
             config_dialog = pya.QDialog(self)
             config_dialog.setWindowTitle(f"Config - {str(config_path)}")
             config_dialog.resize(600, 400)
@@ -250,25 +292,21 @@ class kai_ui(pya.QDialog):
 
             config_dialog.exec_()
 
-    # Store the complete chat history upon closing
-    def closeEvent(self, event):
+    def closeEvent(self, event: pya.QCloseEvent) -> None:
+        """Handle the close event by saving the complete chat history."""
         if self.chat_history:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             file_path = self.history_dir / f'kai_complete_{timestamp}.txt'
-    
-            # Convert chat history into a readable format
-            formatted_history = []
-            for message in self.chat_history:
-                role = message["role"]
-                content = message["content"]
-                formatted_message = f"{role.capitalize()} [{self.get_timestamp()}]: {content}"
-                formatted_history.append(formatted_message)
-    
-            # Save the entire chat history in a human-readable format
+
+            formatted_history = [
+                f"{message['role'].capitalize()} [{self.get_timestamp()}]: {message['content']}"
+                for message in self.chat_history
+            ]
+
             with open(file_path, 'w') as file:
-                file.write("\n".join(formatted_history))  # Save the entire session
-    
-            event.accept()  # Ensure the app closes after saving the history
+                file.write("\n".join(formatted_history))
+
+        event.accept()
 
 
 # Run the UI if this script is executed directly
