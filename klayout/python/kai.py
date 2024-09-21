@@ -4,16 +4,12 @@ from datetime import datetime
 from openai import OpenAI
 
 # Helper function for OpenAI API call
-def generate_ai_response(api_key, prompt):
-    client = OpenAI(api_key=api_key)
-    
-    # OpenAI Chat completion call
+def generate_ai_response(api_key, model_name, messages):
+    client = OpenAI(api_key=api_key)      
+    # OpenAI Chat completion call with full chat history
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ],
+        model=model_name,
+        messages=messages,  # Pass the entire chat history
         max_tokens=150
     )
     return response.choices[0].message.content.strip()
@@ -59,7 +55,8 @@ class kai_ui(pya.QDialog):
                 color: #333333;
             }
             QListWidget {
-                min-width: 150px;
+                min-width: 200px;  /* Adjust panel size */
+                max-width: 100px;
             }
         """
 
@@ -107,8 +104,8 @@ class kai_ui(pya.QDialog):
     def setup_right_panel(self):
         right_layout = pya.QVBoxLayout()
 
-        # Chat history list
-        right_layout.addWidget(pya.QLabel("Chat History"))
+        # Chat history list (only loads "complete" txt files)
+        right_layout.addWidget(pya.QLabel("Chat History (Complete)"))
         self.history_list = pya.QListWidget(self)
         self.load_history_files()
         right_layout.addWidget(self.history_list)
@@ -136,6 +133,7 @@ class kai_ui(pya.QDialog):
                         key, value = line.split(':', 1)
                         config_data[key.strip()] = value.strip()
         self.api_key = config_data.get('api_key', 'Not set')
+        self.model_name = config_data.get('model_name', 'Not set')
         return config_data
 
     # Update config display
@@ -151,22 +149,25 @@ class kai_ui(pya.QDialog):
     def on_submit(self):
         prompt = self.user_input.text
         if prompt and self.api_key != 'Not set':
-            # User prompt
+            # Add user message to chat history
+            self.chat_history.append({"role": "user", "content": prompt})
             user_entry = f"User [{self.get_timestamp()}]: {prompt}"
-            self.chat_history.append(user_entry)
             self.append_to_output(user_entry)
 
-            # AI response
-            response = generate_ai_response(self.api_key, prompt)
+            # Call OpenAI with the entire chat history
+            response = generate_ai_response(self.api_key, self.model_name, self.chat_history)
+
+            # Add AI response to chat history
+            self.chat_history.append({"role": "assistant", "content": response})
             ai_entry = f"AI [{self.get_timestamp()}]: {response}"
-            self.chat_history.append(ai_entry)
             self.append_to_output(ai_entry, is_ai=True)
 
-            # Add separator
+            # Add separator for visual clarity
             self.append_to_output("===")
 
             # Store individual chat entry immediately
             self.store_chat_history(user_entry, ai_entry)
+
 
     # Append output to display
     def append_to_output(self, text, is_ai=False):
@@ -195,18 +196,18 @@ class kai_ui(pya.QDialog):
             file.write(ai_entry + '\n')
             file.write("===\n")
 
-    # Load history files into the list
+    # Load history files into the list (only "complete" txt files)
     def load_history_files(self):
         self.history_list.clear()
         if self.history_dir.exists():
-            for file in self.history_dir.glob("*.txt"):
+            for file in self.history_dir.glob("*complete*.txt"):
                 self.history_list.addItem(str(file.stem))  # Show file name without extension
 
     # Load selected history file
     def load_selected_history(self):
-        selected_item = self.history_list.currentItem
+        selected_item = self.history_list.currentItem()
         if selected_item:
-            file_name = selected_item.text
+            file_name = selected_item.text()
             file_path = self.history_dir / f"{file_name}.txt"
             if file_path.exists():
                 with open(file_path, 'r') as file:
@@ -254,9 +255,21 @@ class kai_ui(pya.QDialog):
         if self.chat_history:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             file_path = self.history_dir / f'kai_complete_{timestamp}.txt'
+    
+            # Convert chat history into a readable format
+            formatted_history = []
+            for message in self.chat_history:
+                role = message["role"]
+                content = message["content"]
+                formatted_message = f"{role.capitalize()} [{self.get_timestamp()}]: {content}"
+                formatted_history.append(formatted_message)
+    
+            # Save the entire chat history in a human-readable format
             with open(file_path, 'w') as file:
-                file.write("\n".join(self.chat_history))  # Save the entire session
+                file.write("\n".join(formatted_history))  # Save the entire session
+    
             event.accept()  # Ensure the app closes after saving the history
+
 
 # Run the UI if this script is executed directly
 if __name__ == "__main__":

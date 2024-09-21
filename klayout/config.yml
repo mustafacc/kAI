@@ -1,4 +1,4 @@
 chat_history_dir: '/history'
 api_key: null
-model_name: 'gpt-4o'
+model_name: gpt-4o-mini
 
