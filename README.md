@@ -9,3 +9,5 @@ double-click and ensure a green checkmark appears on the kAI package icon. click
 
 ## Usage
 
+
+Credits: Thanks to [klive](https://github.com/gdsfactory/klive) for codebase and package structure!
